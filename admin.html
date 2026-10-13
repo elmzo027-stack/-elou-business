@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestion — ELOU BUSINESS</title>
+<style>
+:root{--ink:#111;--paper:#f5f5f2;--line:#deded8}*{box-sizing:border-box}body{margin:0;background:var(--paper);font-family:Arial,sans-serif;color:var(--ink)}header{background:#111;color:#fff;padding:22px 18px}header h1{font-size:20px;margin:0 0 6px;letter-spacing:.08em}header p{margin:0;color:#ccc;font-size:13px}.wrap{max-width:900px;margin:22px auto;padding:0 14px}.notice{background:#fff4d5;border:1px solid #ecd68d;border-radius:12px;padding:14px;font-size:13px;line-height:1.5;margin-bottom:18px}.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}h2{font-size:17px;margin:0 0 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-size:12px;font-weight:bold;margin-bottom:6px}input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;background:#fff;font-size:15px}input[type=file]{padding:8px}.field{margin-bottom:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}button,.btn{border:0;border-radius:9px;background:#111;color:white;padding:12px 15px;font-weight:bold;cursor:pointer;font-size:13px}.secondary{background:#eee;color:#111}.danger{background:#a32626}.items{display:grid;gap:10px}.item{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center}.thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;background:#eee}.meta{font-size:13px;line-height:1.5}.muted{color:#666;font-size:12px}a{color:inherit}@media(max-width:560px){.grid{grid-template-columns:1fr}.item{grid-template-columns:55px 1fr}.thumb{width:55px;height:55px}.item .actions{grid-column:1/-1}.item button{flex:1}}
+</style></head><body>
+<header><h1>ELOU BUSINESS</h1><p>Espace de gestion des produits</p></header>
+<main class="wrap">
+<div class="notice"><strong>À savoir :</strong> cette première version enregistre les produits dans le stockage du navigateur de cet appareil. Les changements ne sont pas synchronisés avec les autres téléphones ni avec les clients. Il faudra connecter une base de données en ligne avant d'utiliser cette gestion en production. Ne partage pas cette page comme un espace sécurisé.</div>
+<section class="panel"><h2 id="formTitle">Ajouter un article</h2>
+<form id="form"><input type="hidden" id="id">
+<div class="grid">
+<div class="field"><label for="name">Nom du produit</label><input id="name" required value="T-shirt slim fit uni"></div>
+<div class="field"><label for="color">Couleur</label><input id="color" required placeholder="Noir, blanc, beige…"></div>
+<div class="field"><label for="price">Prix (FCFA)</label><input id="price" type="number" min="0" required value="2500"></div>
+<div class="field"><label for="hex">Couleur d'aperçu</label><input id="hex" type="color" value="#151515"></div>
+<div class="field" style="grid-column:1/-1"><label for="photo">Photo du produit (facultatif)</label><input id="photo" type="file" accept="image/*"><div class="muted">Choisis une photo depuis ton iPhone. Pour garder le site rapide, utilise de préférence une photo compressée.</div></div>
+</div><div class="actions"><button type="submit">Enregistrer l'article</button><button class="secondary" type="button" id="reset">Vider le formulaire</button><a class="btn secondary" href="index.html">Voir la boutique</a></div>
+</form></section>
+<section class="panel"><h2>Articles enregistrés</h2><div class="items" id="items"></div><div class="actions"><button class="secondary" id="export">Exporter une sauvegarde JSON</button><button class="danger" id="resetDefaults">Restaurer les articles de départ</button></div></section>
+</main>
+<script>
+const defaults=[
+{id:'slim-noir',name:'T-shirt slim fit uni',color:'Noir',hex:'#151515',price:2500,image:''},
+{id:'slim-blanc',name:'T-shirt slim fit uni',color:'Blanc',hex:'#fafafa',price:2500,image:''},
+{id:'slim-gris',name:'T-shirt slim fit uni',color:'Gris',hex:'#92928f',price:2500,image:''},
+{id:'slim-beige',name:'T-shirt slim fit uni',color:'Beige',hex:'#d9c6a6',price:2500,image:''},
+{id:'slim-olive',name:'T-shirt slim fit uni',color:'Vert olive',hex:'#55573b',price:2500,image:''}];
+let products;try{products=JSON.parse(localStorage.getItem('elou_products'))||defaults}catch(e){products=defaults}
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem('elou_products',JSON.stringify(products));render()}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){$('items').innerHTML=products.map(p=>`<article class="item"><img class="thumb" src="${p.image||''}" style="${p.image?'':'background:'+p.hex}" alt=""><div class="meta"><strong>${escapeHtml(p.name)}</strong><br>${escapeHtml(p.color)} · ${Number(p.price).toLocaleString('fr-FR')} FCFA<br><span class="muted">${p.image?'Photo ajoutée':'Illustration couleur'}</span></div><div class="actions"><button class="secondary" onclick="editItem('${p.id}')">Modifier</button><button class="danger" onclick="deleteItem('${p.id}')">Supprimer</button></div></article>`).join('')||'<p class="muted">Aucun article.</p>'}
+function resetForm(){$('form').reset();$('id').value='';$('name').value='T-shirt slim fit uni';$('price').value=2500;$('hex').value='#151515';$('formTitle').textContent='Ajouter un article'}
+window.editItem=id=>{const p=products.find(x=>x.id===id);if(!p)return;$('id').value=p.id;$('name').value=p.name;$('color').value=p.color;$('price').value=p.price;$('hex').value=p.hex||'#151515';$('formTitle').textContent='Modifier un article';window.scrollTo({top:0,behavior:'smooth'})}
+window.deleteItem=id=>{if(confirm('Supprimer cet article ?')){products=products.filter(p=>p.id!==id);save()}}
+$('form').addEventListener('submit',async e=>{e.preventDefault();let old=products.find(p=>p.id===$('id').value);let image=old?.image||'';const file=$('photo').files[0];if(file){if(file.size>2*1024*1024){alert('Photo trop lourde (plus de 2 Mo). Choisis une photo plus légère.');return}image=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
+const p={id:$('id').value||('elou-'+Date.now()),name:$('name').value.trim(),color:$('color').value.trim(),price:Number($('price').value),hex:$('hex').value,image};if(old)products=products.map(x=>x.id===old.id?p:x);else products.push(p);save();resetForm();alert('Article enregistré sur cet appareil.');});
+$('reset').onclick=resetForm;
+$('resetDefaults').onclick=()=>{if(confirm('Restaurer les cinq articles de départ ? Les modifications locales seront remplacées.')){products=defaults;save();resetForm()}}
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(products,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='elou-produits-sauvegarde.json';a.click();URL.revokeObjectURL(a.href)}
+render();
+</script></body></html>

@@ -107,8 +107,8 @@
           <div class="field full-span"><label for="customerNote">Note complémentaire (facultatif)</label><textarea id="customerNote" name="note" placeholder="Une précision sur la commande…"></textarea></div>
         </div>
         <div class="checkout-summary" id="checkoutSummary"></div>
-        <p class="form-hint">En cliquant, WhatsApp s’ouvrira avec le récapitulatif de ta commande prêt à être envoyé à ELOU BUSINESS. La commande ne sera transmise qu’après ton envoi dans WhatsApp. Les frais de livraison et les paiements seront confirmés avec le vendeur.</p>
-        <button class="primary full" type="submit">Envoyer ma commande sur WhatsApp →</button>
+        <p class="form-hint">Prototype de démonstration : le formulaire prépare un récapitulatif de commande sur cette page, mais n'envoie pas encore les données à ELOU BUSINESS. Il faudra connecter un service de réception des commandes avant la mise en ligne.</p>
+        <button class="primary full" type="submit">Préparer ma commande →</button>
       </form>
       <div class="success" id="orderSuccess"><div style="font-size:35px">✓</div><h3>Récapitulatif préparé.</h3><p id="successText"></p><button type="button" class="secondary" id="backToShop">Retour à la boutique</button></div>
     </div>
@@ -116,19 +116,20 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const products = [
-      {id:'slim-noir',name:'T-shirt slim fit uni',color:'Noir',hex:'#151515',price:2500},
-      {id:'slim-blanc',name:'T-shirt slim fit uni',color:'Blanc',hex:'#fafafa',price:2500},
-      {id:'slim-gris',name:'T-shirt slim fit uni',color:'Gris',hex:'#92928f',price:2500},
-      {id:'slim-beige',name:'T-shirt slim fit uni',color:'Beige',hex:'#d9c6a6',price:2500},
-      {id:'slim-olive',name:'T-shirt slim fit uni',color:'Vert olive',hex:'#55573b',price:2500}
+    const defaultProducts = [
+      {id:'slim-noir',name:'T-shirt slim fit uni',color:'Noir',hex:'#151515',price:2500,image:''},
+      {id:'slim-blanc',name:'T-shirt slim fit uni',color:'Blanc',hex:'#fafafa',price:2500,image:''},
+      {id:'slim-gris',name:'T-shirt slim fit uni',color:'Gris',hex:'#92928f',price:2500,image:''},
+      {id:'slim-beige',name:'T-shirt slim fit uni',color:'Beige',hex:'#d9c6a6',price:2500,image:''},
+      {id:'slim-olive',name:'T-shirt slim fit uni',color:'Vert olive',hex:'#55573b',price:2500,image:''}
     ];
+    let products = (()=>{try{return JSON.parse(localStorage.getItem('elou_products')) || defaultProducts}catch(e){return defaultProducts}})();
     const sizes = ['S','M','L','XL','XXL'];
     let cart = [];
     const $ = id => document.getElementById(id);
     const money = amount => new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
     function shirtSvg(color, id='shirt') { return `<svg class="shirt" viewBox="0 0 220 240" role="img" aria-label="T-shirt uni ${color}"><defs><linearGradient id="g-${id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${color}"/><stop offset=".55" stop-color="${color}"/><stop offset="1" stop-color="${color}"/></linearGradient></defs><path d="M70 20 L91 12 Q110 34 129 12 L150 20 L204 57 L178 101 L151 85 L157 222 Q110 232 63 222 L69 85 L42 101 L16 57 Z" fill="url(#g-${id})" stroke="${color==='#fafafa'?'#d4d4d0':'rgba(0,0,0,.18)'}" stroke-width="1.5"/><path d="M91 12 Q110 43 129 12" fill="none" stroke="${color==='#fafafa'?'#d4d4d0':'rgba(255,255,255,.22)'}" stroke-width="4"/><path d="M70 88 L65 218 M150 88 L155 218" stroke="${color==='#fafafa'?'#e7e7e3':'rgba(255,255,255,.12)'}" stroke-width="1"/></svg>`; }
-    function renderProducts(){ $('products').innerHTML = products.map((p,i)=>`<article class="product-card"><div class="product-image">${i===0?'<span class="tag">Essentiel</span>':''}${shirtSvg(p.hex,p.id)}<button class="quick-add" data-add="${p.id}">Ajouter au panier +</button></div><div class="product-meta"><h3>${p.name}</h3><div class="price-row"><span>${p.color}</span><span class="price">${money(p.price)}</span></div><div class="colors">${products.map(c=>`<a href="#collection" class="swatch" title="${c.color}" aria-label="${c.color}" style="background:${c.hex}" data-color="${c.id}"></a>`).join('')}</div><div class="small-note">Coupe ajustée · modèle uni</div></div></article>`).join(''); }
+    function renderProducts(){ $('products').innerHTML = products.map((p,i)=>`<article class="product-card"><div class="product-image">${i===0?'<span class="tag">Essentiel</span>':''}${p.image?`<img src="${p.image}" alt="${p.name} - ${p.color}" style="width:100%;height:100%;object-fit:cover">`:shirtSvg(p.hex,p.id)}<button class="quick-add" data-add="${p.id}">Ajouter au panier +</button></div><div class="product-meta"><h3>${p.name}</h3><div class="price-row"><span>${p.color}</span><span class="price">${money(p.price)}</span></div><div class="colors">${products.map(c=>`<a href="#collection" class="swatch" title="${c.color}" aria-label="${c.color}" style="background:${c.hex}" data-color="${c.id}"></a>`).join('')}</div><div class="small-note">Coupe ajustée · modèle uni</div></div></article>`).join(''); }
     function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
     function addToCart(id){const p=products.find(x=>x.id===id);let item=cart.find(x=>x.id===id&&x.size==='M');if(item)item.qty++;else cart.push({...p,size:'M',qty:1});renderCart();toast(`${p.color} ajouté au panier · taille M par défaut. Tu peux modifier la taille dans le panier.`)}
     function changeQty(id,size,delta){const item=cart.find(x=>x.id===id&&x.size===size);if(!item)return;item.qty+=delta;if(item.qty<=0)cart=cart.filter(x=>!(x.id===id&&x.size===size));renderCart()}
@@ -141,9 +142,9 @@
     function closeCheckout(){ $('checkoutModal').classList.remove('open');document.body.style.overflow=''}
     $('products').addEventListener('click',e=>{const add=e.target.closest('[data-add]');if(add){addToCart(add.dataset.add);return}const sw=e.target.closest('[data-color]');if(sw){e.preventDefault();const card=sw.closest('.product-card');const target=products.find(p=>p.id===sw.dataset.color);if(target){const current=card.querySelector('.product-meta h3');const price=card.querySelector('.price');const colorText=card.querySelector('.price-row span');const svg=card.querySelector('.product-image .shirt');current.textContent=target.name;colorText.textContent=target.color;price.textContent=money(target.price);const fresh=document.createElement('div');fresh.innerHTML=shirtSvg(target.hex,'preview-'+target.id);const newSvg=fresh.firstElementChild;newSvg.classList.add('shirt');svg.replaceWith(newSvg);const button=card.querySelector('[data-add]');button.dataset.add=target.id;}}});
     $('openCart').addEventListener('click',openCart);$('closeCart').addEventListener('click',closeCart);$('overlay').addEventListener('click',closeCart);$('checkoutButton').addEventListener('click',openCheckout);$('closeCheckout').addEventListener('click',closeCheckout);$('checkoutModal').addEventListener('click',e=>{if(e.target===$('checkoutModal'))closeCheckout()});$('backToShop').addEventListener('click',()=>{closeCheckout();document.querySelector('#collection').scrollIntoView({behavior:'smooth'})});
-    $('checkoutForm').addEventListener('submit',e=>{e.preventDefault();if(!cart.length)return;const f=new FormData(e.currentTarget);const total=cart.reduce((s,x)=>s+x.price*x.qty,0);const orderRef='EB-'+Date.now().toString().slice(-6);const lines=cart.map(x=>`• ${x.qty} x T-shirt slim fit uni ${x.color}, taille ${x.size} — ${money(x.price*x.qty)}`).join('\n');const message=[`Bonjour ELOU BUSINESS, je souhaite passer une commande.`,`Référence : ${orderRef}`,``,`ARTICLES :`,` ${lines}`,``,`Total produits : ${money(total)}`,'Frais de livraison : à confirmer','','INFORMATIONS CLIENT :',`Nom : ${f.get('name')}`,`Téléphone : ${f.get('phone')}`,`Ville/commune : ${f.get('city')}`,`Quartier : ${f.get('zone')}`,`Adresse/repère : ${f.get('address')||'Non précisé'}`,`Réception : ${f.get('delivery')}`,`Paiement souhaité : ${f.get('payment')}`,`Note : ${f.get('note')||'Aucune'}`,'','Merci de confirmer la disponibilité, les frais de livraison et les modalités de paiement.'].join('\n');const waUrl='https://wa.me/221783085262?text='+encodeURIComponent(message);window.open(waUrl,'_blank','noopener,noreferrer');$('successText').innerHTML=`Référence : <b>${orderRef}</b><br>WhatsApp a été ouvert avec ta commande préremplie. <b>Pour transmettre la commande, appuie sur Envoyer dans WhatsApp.</b><br><br>Total produits : <b>${money(total)}</b><br>Les frais de livraison restent à confirmer.`;$('checkoutForm').style.display='none';$('orderSuccess').classList.add('show')});
+    $('checkoutForm').addEventListener('submit',e=>{e.preventDefault();if(!cart.length)return;const f=new FormData(e.currentTarget);const total=cart.reduce((s,x)=>s+x.price*x.qty,0);const orderRef='EB-'+Date.now().toString().slice(-6);const lines=cart.map(x=>`${x.qty} x ${x.color}, taille ${x.size}`).join('; ');$('successText').innerHTML=`Référence de démonstration : <b>${orderRef}</b><br>Client : ${escapeHtml(f.get('name'))}<br>Articles : ${escapeHtml(lines)}<br>Total produits : <b>${money(total)}</b><br><br>Ce récapitulatif n'a pas été envoyé au vendeur. Avant de publier le site, connectons le formulaire à une adresse e-mail, un système de commandes ou un canal de réception choisi.`;$('checkoutForm').style.display='none';$('orderSuccess').classList.add('show')});
     function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     $('year').textContent=new Date().getFullYear();renderProducts();renderCart();
   </script>
-</body>
+<footer style="padding:18px;text-align:center;font-size:11px;color:#777">ELOU BUSINESS · <a href="admin.html" style="text-decoration:underline">Espace gestion</a></footer>\n</body>
 </html>
