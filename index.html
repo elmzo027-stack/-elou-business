@@ -123,7 +123,36 @@
       {id:'slim-beige',name:'T-shirt slim fit uni',color:'Beige',hex:'#d9c6a6',price:2500,image:''},
       {id:'slim-olive',name:'T-shirt slim fit uni',color:'Vert olive',hex:'#55573b',price:2500,image:''}
     ];
+    const SUPABASE_URL = ‘https://zmcvfbbugzwazopyowlb.supabase.co’;
+const SUPABASE_KEY = ‘sb_publishable_-6JQ2crbIkPYlJK0MYpWKw_fRCs-AVU’;
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let products = (()=>{try{return JSON.parse(localStorage.getItem('elou_products')) || defaultProducts}catch(e){return defaultProducts}})();
+    async function loadProductsFromSupabase() {
+  const { data, error } = await db
+    .from('products')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('Erreur Supabase :', error);
+    renderProducts();
+    return;
+  }
+
+  if (data && data.length > 0) {
+    products = data.map(p => ({
+      id: String(p.id),
+      name: p.name || 'T-shirt slim fit uni',
+      color: p.category || 'Noir',
+      hex: p.hex || '#151515',
+      price: Number(p.price || 2500),
+      image: p.image || ''
+    }));
+  }
+
+  renderProducts();
+  renderCart();
+}
     const sizes = ['S','M','L','XL','XXL'];
     let cart = [];
     const $ = id => document.getElementById(id);
@@ -134,6 +163,7 @@
     function addToCart(id){const p=products.find(x=>x.id===id);let item=cart.find(x=>x.id===id&&x.size==='M');if(item)item.qty++;else cart.push({...p,size:'M',qty:1});renderCart();toast(`${p.color} ajouté au panier · taille M par défaut. Tu peux modifier la taille dans le panier.`)}
     function changeQty(id,size,delta){const item=cart.find(x=>x.id===id&&x.size===size);if(!item)return;item.qty+=delta;if(item.qty<=0)cart=cart.filter(x=>!(x.id===id&&x.size===size));renderCart()}
     function removeItem(id,size){cart=cart.filter(x=>!(x.id===id&&x.size===size));renderCart()}
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     function changeSize(id,oldSize,newSize){const item=cart.find(x=>x.id===id&&x.size===oldSize);if(!item)return;const other=cart.find(x=>x.id===id&&x.size===newSize);if(other){other.qty+=item.qty;cart=cart.filter(x=>x!==item)}else item.size=newSize;renderCart()}
     function renderCart(){const count=cart.reduce((s,x)=>s+x.qty,0),total=cart.reduce((s,x)=>s+x.price*x.qty,0);$('cartCount').textContent=count;$('subtotal').textContent=money(total);$('checkoutButton').disabled=count===0;$('checkoutButton').style.opacity=count===0?'.45':'1';$('checkoutButton').style.cursor=count===0?'not-allowed':'pointer';if(!cart.length){$('cartItems').innerHTML='<div class="empty">Ton panier est encore vide.<br>Découvre les essentiels et ajoute tes pièces préférées.</div>';return}$('cartItems').innerHTML=cart.map(x=>`<div class="cart-item"><div class="cart-thumb">${shirtSvg(x.hex,'cart-'+x.id)}</div><div><h3>${x.name}</h3><p>${x.color} · ${money(x.price)}</p><label style="font-size:10px;color:#777">Taille : <select aria-label="Taille pour ${x.color}" onchange="changeSize('${x.id}','${x.size}',this.value)" style="border:1px solid #ddd;padding:4px">${sizes.map(s=>`<option ${x.size===s?'selected':''}>${s}</option>`).join('')}</select></label><div class="qty" style="margin-top:9px"><button onclick="changeQty('${x.id}','${x.size}',-1)" aria-label="Diminuer la quantité">−</button><span>${x.qty}</span><button onclick="changeQty('${x.id}','${x.size}',1)" aria-label="Augmenter la quantité">+</button></div><button class="remove" onclick="removeItem('${x.id}','${x.size}')">Retirer</button></div><strong style="font-size:12px;white-space:nowrap">${money(x.price*x.qty)}</strong></div>`).join('')}
     function openCart(){ $('overlay').classList.add('open');$('cartDrawer').classList.add('open');$('cartDrawer').setAttribute('aria-hidden','false') }
@@ -144,7 +174,9 @@
     $('openCart').addEventListener('click',openCart);$('closeCart').addEventListener('click',closeCart);$('overlay').addEventListener('click',closeCart);$('checkoutButton').addEventListener('click',openCheckout);$('closeCheckout').addEventListener('click',closeCheckout);$('checkoutModal').addEventListener('click',e=>{if(e.target===$('checkoutModal'))closeCheckout()});$('backToShop').addEventListener('click',()=>{closeCheckout();document.querySelector('#collection').scrollIntoView({behavior:'smooth'})});
     $('checkoutForm').addEventListener('submit',e=>{e.preventDefault();if(!cart.length)return;const f=new FormData(e.currentTarget);const total=cart.reduce((s,x)=>s+x.price*x.qty,0);const orderRef='EB-'+Date.now().toString().slice(-6);const lines=cart.map(x=>`${x.qty} x ${x.color}, taille ${x.size}`).join('; ');$('successText').innerHTML=`Référence de démonstration : <b>${orderRef}</b><br>Client : ${escapeHtml(f.get('name'))}<br>Articles : ${escapeHtml(lines)}<br>Total produits : <b>${money(total)}</b><br><br>Ce récapitulatif n'a pas été envoyé au vendeur. Avant de publier le site, connectons le formulaire à une adresse e-mail, un système de commandes ou un canal de réception choisi.`;$('checkoutForm').style.display='none';$('orderSuccess').classList.add('show')});
     function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-    $('year').textContent=new Date().getFullYear();renderProducts();renderCart();
+    $('year').textContent=new Date().getFullYear();
+renderCart();
+loadProductsFromSupabase();
   </script>
 <footer style="padding:18px;text-align:center;font-size:11px;color:#777">ELOU BUSINESS · <a href="admin.html" style="text-decoration:underline">Espace gestion</a></footer>\n</body>
 </html>
