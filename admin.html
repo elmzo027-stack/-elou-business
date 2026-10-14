@@ -1,43 +1,232 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gestion — ELOU BUSINESS</title>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration | ELOU BUSINESS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--ink:#111;--paper:#f5f5f2;--line:#deded8}*{box-sizing:border-box}body{margin:0;background:var(--paper);font-family:Arial,sans-serif;color:var(--ink)}header{background:#111;color:#fff;padding:22px 18px}header h1{font-size:20px;margin:0 0 6px;letter-spacing:.08em}header p{margin:0;color:#ccc;font-size:13px}.wrap{max-width:900px;margin:22px auto;padding:0 14px}.notice{background:#fff4d5;border:1px solid #ecd68d;border-radius:12px;padding:14px;font-size:13px;line-height:1.5;margin-bottom:18px}.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}h2{font-size:17px;margin:0 0 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-size:12px;font-weight:bold;margin-bottom:6px}input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;background:#fff;font-size:15px}input[type=file]{padding:8px}.field{margin-bottom:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}button,.btn{border:0;border-radius:9px;background:#111;color:white;padding:12px 15px;font-weight:bold;cursor:pointer;font-size:13px}.secondary{background:#eee;color:#111}.danger{background:#a32626}.items{display:grid;gap:10px}.item{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center}.thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;background:#eee}.meta{font-size:13px;line-height:1.5}.muted{color:#666;font-size:12px}a{color:inherit}@media(max-width:560px){.grid{grid-template-columns:1fr}.item{grid-template-columns:55px 1fr}.thumb{width:55px;height:55px}.item .actions{grid-column:1/-1}.item button{flex:1}}
-</style></head><body>
-<header><h1>ELOU BUSINESS</h1><p>Espace de gestion des produits</p></header>
-<main class="wrap">
-<div class="notice"><strong>À savoir :</strong> cette première version enregistre les produits dans le stockage du navigateur de cet appareil. Les changements ne sont pas synchronisés avec les autres téléphones ni avec les clients. Il faudra connecter une base de données en ligne avant d'utiliser cette gestion en production. Ne partage pas cette page comme un espace sécurisé.</div>
-<section class="panel"><h2 id="formTitle">Ajouter un article</h2>
-<form id="form"><input type="hidden" id="id">
-<div class="grid">
-<div class="field"><label for="name">Nom du produit</label><input id="name" required value="T-shirt slim fit uni"></div>
-<div class="field"><label for="color">Couleur</label><input id="color" required placeholder="Noir, blanc, beige…"></div>
-<div class="field"><label for="price">Prix (FCFA)</label><input id="price" type="number" min="0" required value="2500"></div>
-<div class="field"><label for="hex">Couleur d'aperçu</label><input id="hex" type="color" value="#151515"></div>
-<div class="field" style="grid-column:1/-1"><label for="photo">Photo du produit (facultatif)</label><input id="photo" type="file" accept="image/*"><div class="muted">Choisis une photo depuis ton iPhone. Pour garder le site rapide, utilise de préférence une photo compressée.</div></div>
-</div><div class="actions"><button type="submit">Enregistrer l'article</button><button class="secondary" type="button" id="reset">Vider le formulaire</button><a class="btn secondary" href="index.html">Voir la boutique</a></div>
-</form></section>
-<section class="panel"><h2>Articles enregistrés</h2><div class="items" id="items"></div><div class="actions"><button class="secondary" id="export">Exporter une sauvegarde JSON</button><button class="danger" id="resetDefaults">Restaurer les articles de départ</button></div></section>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f5f5;color:#171717;font-family:Arial,sans-serif}
+header{background:#111;color:white;padding:22px;text-align:center}
+header h1{margin:0;font-size:22px;letter-spacing:2px}
+header p{font-size:12px;color:#ccc}
+main{max-width:850px;margin:25px auto;padding:15px}
+.box{background:white;padding:22px;margin-bottom:20px;border-radius:10px}
+h2{font-size:18px;margin-top:0}
+input,button{width:100%;padding:12px;margin:7px 0;border:1px solid #ddd;border-radius:5px;font-size:15px}
+button{background:#111;color:white;border:0;cursor:pointer;font-weight:bold}
+button.danger{background:#b42318}
+button.secondary{background:#555}
+.product{border:1px solid #ddd;padding:12px;margin:12px 0;border-radius:7px;overflow-wrap:anywhere}
+.product img{width:90px;height:90px;object-fit:cover;display:block;margin-bottom:8px}
+#status{padding:10px;font-size:14px;overflow-wrap:anywhere}
+.hidden{display:none}
+label{font-size:13px;font-weight:bold;display:block;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+<h1>ELOU BUSINESS</h1>
+<p>ESPACE DE GESTION DES PRODUITS</p>
+</header>
+<main>
+<div class="box" id="loginBox">
+<h2>Connexion administrateur</h2>
+<p>Connecte-toi avec ton compte Supabase.</p>
+<input id="email" type="email" placeholder="Adresse e-mail">
+<input id="password" type="password" placeholder="Mot de passe">
+<button onclick="login()">Se connecter</button>
+</div>
+<div id="adminBox" class="hidden">
+<div class="box">
+<h2>Ajouter ou modifier un produit</h2>
+<label>Nom du produit</label>
+<input id="name" placeholder="Ex. T-shirt slim fit uni">
+<label>Couleur</label>
+<input id="color" placeholder="Ex. Noir">
+<label>Code couleur</label>
+<input id="hex" type="color" value="#151515">
+<label>Prix en FCFA</label>
+<input id="price" type="number" value="2500">
+<label>Photo du produit</label>
+<input id="imageFile" type="file" accept="image/*">
+<button onclick="saveProduct()">Enregistrer le produit</button>
+<button class="secondary" onclick="resetForm()">Annuler la modification</button>
+<p id="status"></p>
+</div>
+<div class="box">
+<h2>Produits enregistrés</h2>
+<button onclick="loadProducts()">Actualiser la liste</button>
+<div id="products"></div>
+</div>
+<button class="danger" onclick="logout()">Se déconnecter</button>
+</div>
 </main>
 <script>
-const defaults=[
-{id:'slim-noir',name:'T-shirt slim fit uni',color:'Noir',hex:'#151515',price:2500,image:''},
-{id:'slim-blanc',name:'T-shirt slim fit uni',color:'Blanc',hex:'#fafafa',price:2500,image:''},
-{id:'slim-gris',name:'T-shirt slim fit uni',color:'Gris',hex:'#92928f',price:2500,image:''},
-{id:'slim-beige',name:'T-shirt slim fit uni',color:'Beige',hex:'#d9c6a6',price:2500,image:''},
-{id:'slim-olive',name:'T-shirt slim fit uni',color:'Vert olive',hex:'#55573b',price:2500,image:''}];
-let products;try{products=JSON.parse(localStorage.getItem('elou_products'))||defaults}catch(e){products=defaults}
-const $=id=>document.getElementById(id);
-function save(){localStorage.setItem('elou_products',JSON.stringify(products));render()}
-function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){$('items').innerHTML=products.map(p=>`<article class="item"><img class="thumb" src="${p.image||''}" style="${p.image?'':'background:'+p.hex}" alt=""><div class="meta"><strong>${escapeHtml(p.name)}</strong><br>${escapeHtml(p.color)} · ${Number(p.price).toLocaleString('fr-FR')} FCFA<br><span class="muted">${p.image?'Photo ajoutée':'Illustration couleur'}</span></div><div class="actions"><button class="secondary" onclick="editItem('${p.id}')">Modifier</button><button class="danger" onclick="deleteItem('${p.id}')">Supprimer</button></div></article>`).join('')||'<p class="muted">Aucun article.</p>'}
-function resetForm(){$('form').reset();$('id').value='';$('name').value='T-shirt slim fit uni';$('price').value=2500;$('hex').value='#151515';$('formTitle').textContent='Ajouter un article'}
-window.editItem=id=>{const p=products.find(x=>x.id===id);if(!p)return;$('id').value=p.id;$('name').value=p.name;$('color').value=p.color;$('price').value=p.price;$('hex').value=p.hex||'#151515';$('formTitle').textContent='Modifier un article';window.scrollTo({top:0,behavior:'smooth'})}
-window.deleteItem=id=>{if(confirm('Supprimer cet article ?')){products=products.filter(p=>p.id!==id);save()}}
-$('form').addEventListener('submit',async e=>{e.preventDefault();let old=products.find(p=>p.id===$('id').value);let image=old?.image||'';const file=$('photo').files[0];if(file){if(file.size>2*1024*1024){alert('Photo trop lourde (plus de 2 Mo). Choisis une photo plus légère.');return}image=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
-const p={id:$('id').value||('elou-'+Date.now()),name:$('name').value.trim(),color:$('color').value.trim(),price:Number($('price').value),hex:$('hex').value,image};if(old)products=products.map(x=>x.id===old.id?p:x);else products.push(p);save();resetForm();alert('Article enregistré sur cet appareil.');});
-$('reset').onclick=resetForm;
-$('resetDefaults').onclick=()=>{if(confirm('Restaurer les cinq articles de départ ? Les modifications locales seront remplacées.')){products=defaults;save();resetForm()}}
-$('export').onclick=()=>{const blob=new Blob([JSON.stringify(products,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='elou-produits-sauvegarde.json';a.click();URL.revokeObjectURL(a.href)}
-render();
-</script></body></html>
+const SUPABASE_URL = 'https://zmcvfbbugzwazopyowlb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-6JQ2crbIkPYlJK0MYpWKw_fRCs-AVU';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let editingId = null;
+let currentImage = '';
+function message(text){
+document.getElementById('status').textContent = text;
+}
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const {error} = await db.auth.signInWithPassword({email,password});
+  if(error){
+    alert("Connexion impossible : " + error.message);
+    return;
+  }
+  showAdmin();
+}
+async function showAdmin(){
+  const {data} = await db.auth.getSession();
+  if(!data.session) return;
+  document.getElementById('loginBox').classList.add('hidden');
+  document.getElementById('adminBox').classList.remove('hidden');
+  await loadProducts();
+}
+async function logout(){
+  await db.auth.signOut();
+  document.getElementById('adminBox').classList.add('hidden');
+  document.getElementById('loginBox').classList.remove('hidden');
+}
+async function loadProducts(){
+  const container = document.getElementById('products');
+  container.innerHTML = 'Chargement...';
+  const {data,error} = await db
+    .from('products')
+    .select('*')
+    .order('id',{ascending:false});
+  if(error){
+    container.textContent = "Erreur : " + error.message;
+    return;
+  }
+  container.innerHTML = '';
+  if(!data.length){
+    container.textContent = 'Aucun produit enregistré pour le moment.';
+    return;
+  }
+  data.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'product';
+    if(p.image){
+      const img = document.createElement('img');
+      img.src = p.image;
+      img.alt = p.name || 'Produit';
+      div.appendChild(img);
+    }
+    const title = document.createElement('strong');
+    title.textContent = p.name || 'Sans nom';
+    div.appendChild(title);
+    const details = document.createElement('p');
+    details.textContent =
+      (p.category || 'Sans couleur') + ' — ' +
+      Number(p.price || 0).toLocaleString('fr-FR') + ' FCFA';
+    div.appendChild(details);
+    const edit = document.createElement('button');
+    edit.textContent = 'Modifier';
+    edit.onclick = () => editProduct(p);
+    div.appendChild(edit);
+    const del = document.createElement('button');
+    del.textContent = 'Supprimer';
+    del.className = 'danger';
+    del.onclick = () => deleteProduct(p.id);
+    div.appendChild(del);
+    container.appendChild(div);
+  });
+}
+function editProduct(p){
+  editingId = p.id;
+  currentImage = p.image || '';
+  document.getElementById('name').value = p.name || '';
+  document.getElementById('color').value = p.category || '';
+  document.getElementById('hex').value = p.hex || '#151515';
+  document.getElementById('price').value = p.price || 2500;
+  document.getElementById('imageFile').value = '';
+  message('Modification du produit : ' + p.name);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetForm(){
+  editingId = null;
+  currentImage = '';
+  document.getElementById('name').value = '';
+  document.getElementById('color').value = '';
+  document.getElementById('hex').value = '#151515';
+  document.getElementById('price').value = '2500';
+  document.getElementById('imageFile').value = '';
+  message('');
+}
+async function saveProduct(){
+  const name = document.getElementById('name').value.trim();
+  const color = document.getElementById('color').value.trim();
+  const price = Number(document.getElementById('price').value);
+  const hex = document.getElementById('hex').value;
+  if(!name || !color || !price || price < 1){
+    alert('Remplis le nom, la couleur et le prix.');
+    return;
+  }
+  const file = document.getElementById('imageFile').files[0];
+  if(file){
+    if(file.size > 2 * 1024 * 1024){
+      alert('La photo doit faire moins de 2 Mo.');
+      return;
+    }
+    currentImage = await new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  message('Enregistrement en cours...');
+  const product = {
+    name,
+    category: color,
+    price,
+    hex,
+    image: currentImage
+  };
+  let result;
+  if(editingId !== null){
+    result = await db
+      .from('products')
+      .update(product)
+      .eq('id',editingId);
+  }else{
+    result = await db
+      .from('products')
+      .insert([product]);
+  }
+  if(result.error){
+    message('Erreur : ' + result.error.message);
+    return;
+  }
+  message('Produit enregistré avec succès !');
+  resetForm();
+  await loadProducts();
+}
+async function deleteProduct(id){
+  if(!confirm('Veux-tu vraiment supprimer ce produit ?')) return;
+  const {error} = await db
+    .from('products')
+    .delete()
+    .eq('id',id);
+  if(error){
+    alert('Erreur : ' + error.message);
+    return;
+  }
+  await loadProducts();
+}
+db.auth.onAuthStateChange((event,session) => {
+  if(session){
+    showAdmin();
+  }
+});
+showAdmin();
+</script>
+</body>
+</html>
